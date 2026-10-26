@@ -22,7 +22,9 @@
      historiques TNS conserves ; user_data seulement si marketing).
    - Pont iframe Webflow (canal ubepro-assurance-v1, nonce, origine
      parente comparateurpro.fr) : reception de l'URL de campagne
-     publique apres consentement. SANS la partie SMS (exclue a la
+     publique apres consentement. Verification SMS assuree par le module
+ * separe verification-sms.js (l'envoi est bloque tant que le numero
+ * n'est pas verifie). Historique : la partie SMS, exclue a la
      demande) : aucun endpoint SMS, aucun code, contact simple.
    - API de controle QA : window.tnsLead.preview(), .googleSheetPreview(),
      window.tnsTracking.inspect().
@@ -47,7 +49,7 @@ var TNS_CONFIG = {
   var form = document.querySelector('.form-ass');
   if (!form) return;
   var CONFIG = Object.assign({}, TNS_CONFIG, window.TNS_CONFIG_OVERRIDE || {});
-  var VERSION = '2026-10-26-tnspro.fonctionnel1';
+  var VERSION = '2026-10-26-tnspro.fonctionnel2-sms1';
   var wrap = form.parentElement;
   var phone = form.querySelector('input[name="telephone"]');
   var btn = form.querySelector('.bouton-valider');
@@ -497,6 +499,7 @@ var TNS_CONFIG = {
       prenom: textValue('prenom'),
       mail: textValue('mail').toLowerCase(),
       telephone: currentPhone(),
+      telephone_verifie: (window.smsVerification && window.smsVerification.estVerifie(currentPhone())) ? 'oui' : 'non',
       societe: textValue('societe'),
       code_postal: textValue('code_postal').replace(/\s+/g, ''),
       source: campaignSource,
@@ -595,6 +598,7 @@ var TNS_CONFIG = {
       prenom: data.prenom || '',
       mail: data.mail || '',
       telephone: data.telephone || '',
+      telephone_verifie: data.telephone_verifie || 'non',
       societe: data.societe || '',
       code_postal: data.code_postal || '',
       ville: '',
@@ -650,7 +654,8 @@ var TNS_CONFIG = {
       event: micro ? 'formulaire_micro_entrepreneur' : 'formulaire_lead',
       form_id: CONFIG.formId,
       form_name: 'Assurance-TNS-Pro-Form',
-      lead_type: micro ? 'micro_entrepreneur' : 'standard'
+      lead_type: micro ? 'micro_entrepreneur' : 'standard',
+      telephone_verifie: data.telephone_verifie === 'oui'
     };
     if (analyticsGranted()) {
       if (parentLandingUrlReceived) eventData.page_url = clean(trackedPageUrl || entryUrl, 1000);
@@ -740,6 +745,20 @@ var TNS_CONFIG = {
     }
     if (!/^0[1-9]\d{8}$/.test(currentPhone())) {
       erreur('Veuillez saisir un num\u00e9ro de t\u00e9l\u00e9phone fran\u00e7ais valide (10 chiffres).');
+      if (phone) phone.focus();
+      return;
+    }
+    /* Verification SMS (verification-sms.js) : l'envoi du lead exige un numero verifie. */
+    var smsModule = window.smsVerification;
+    if (!smsModule || typeof smsModule.estVerifie !== 'function') {
+      erreur('Vérification par SMS indisponible. Rechargez la page puis réessayez.');
+      return;
+    }
+    if (!smsModule.estVerifie(currentPhone())) {
+      erreur(/^0[67]\d{8}$/.test(currentPhone())
+        ? 'Veuillez vérifier votre numéro par SMS (bouton « Recevoir le code ») avant l’envoi du formulaire.'
+        : 'Un numéro mobile français (06 ou 07) vérifié par SMS est requis pour envoyer le formulaire.');
+      if (typeof smsModule.afficher === 'function') smsModule.afficher();
       if (phone) phone.focus();
       return;
     }
