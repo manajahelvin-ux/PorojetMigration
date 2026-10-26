@@ -69,6 +69,18 @@ Configuration centralisée dans `LEAD_CONFIG` en tête de **`lead-handler.js`** 
 - **Inchangés** : envoi autonome anti-« Oops! », validation FR + consentement, sauvegarde page de remerciement + redirection `ltm_typ`, **aucun code SMS**.
 - **Tests** (jsdom + vrai jQuery, parcours Formly, `fetch` espion, endpoints de test injectés) : ✅ champs cachés remplis depuis l'URL (source `ADW_tns`, gclid, UTM, user…), 2 livraisons correctement formatées, payload normalisé vérifié (libellés, +33…), dataLayer enrichi ; sans configuration → 0 envoi, « Merci ! » OK (GTM seul).
 
+## 9. Alignement production sur la LP de référence `assurance-consultant-conseil-v2` (2026-10-26)
+Inventaire mémorisé + correspondance complète : **`docs/ANALYSE-FONCTIONNELLE-REFERENCE.md`**. Application **sans aucune modification du design, du CSS — ni même du HTML** (tout est dans `lead-handler.js` ; honeypot et champ récap créés en JS, invisibles) :
+- **CRM production HelloLead** : POST enveloppe `{payload:{formId,id,data}}` vers `…/api/webflow/get_information.php`, transport `nocors` (sendBeacon → fetch `text/plain`) comme la référence, `formId = ADW_LP_ASSURANCE_TNS_PRO` (à enregistrer côté CRM).
+- **Google Sheets AGV/AMR** : même Apps Script confirmé que la référence, champs plats form-urlencoded, JSON `status:"ok"` vérifié, mapping `solution`/`enjeu` (récap `autre_info_fj` ≤ 500 car.) + q1–q3.
+- **Honeypot** `website` : rempli ⇒ « Merci ! » sans aucun envoi ni événement.
+- **Consentement filtrant** (modèle référence) lu dans le cookie de la bannière existante `user_cookie_preferences` : analytics ⇒ UTM/LTM/`page_url`, marketing ⇒ click IDs + `user_data` ; sans consentement, `source = LP TNS PRO` et événement GTM minimal. Tracking alias complet + persistance session + purge.
+- **Pont iframe Webflow** (canal `ubepro-assurance-v1`, nonce, origine `www.comparateurpro.fr`) : réception `landing-url` après consentement — **sans le proxy SMS**. Snippet parent adapté : `docs/WEBFLOW_EMBED-TNS.md`.
+- **GTM** : schéma référence (`form_id`, `lead_type`, tracking consenti) en conservant les noms d'événements historiques TNS. Livraisons parallèles avec états : « Merci ! » seulement si CRM ou Sheets aboutit, sinon message d'erreur + réessai. APIs QA `window.tnsLead.preview()` / `tnsTracking.inspect()`.
+- ⛔ **Confirmation téléphone par code SMS : non portée** (aucun endpoint, aucun champ `telephone_verifie` émis).
+- **Tests** (jsdom + vrai jQuery, parcours Formly, beacon/fetch espions, cookie consentement réel) : 5/5 ✅ — parité complète consentie, filtrage sans consentement, honeypot, événement micro-entrepreneur, échec livraisons sans faux « Merci ! ».
+- Guide de lancement mis à jour : `docs/CONFIGURATION-CRM-GOOGLE-SHEET-GTM.md`. Livrable : `assurance-tns-pro-v2-adw-FONCTIONNEL.zip`.
+
 ## Checklist avant mise en ligne
 1. Parcours complet du formulaire jusqu'à « Merci ! » (sans étape SMS, sans envoi Webflow).
 2. Renseigner `crm.url` et `googleSheet.url` dans `lead-handler.js` (voir `docs/CONFIGURATION-CRM-GOOGLE-SHEET-GTM.md`), puis tester un lead complet avec l'URL de test fournie.
