@@ -24,3 +24,10 @@ Consentement total + URL trackée → CRM/Sheets/GTM complets (identité vérifi
 - [ ] Aperçu GTM (événements + variables, consentement accepté)
 - [ ] Parcours complet en local dans un **nouveau dossier** (cache navigateur)
 - [ ] Si iframe : embed + `publicLandingPath` dans `lead-handler.js`
+
+## Ajout — Verification du numero par SMS (2026-10-26)
+A la demande metier, la verification par code SMS (API SMS Partner HelloLead, meme contrat que la LP de reference) est **reintroduite** :
+- nouveau module `verification-sms.js` : mobile 06/07, envoi `envoyer_code`, verification `verifier_code` (code 6 chiffres, 10 min, usage unique), compte a rebours de renvoi 120 s, erreurs 422/404/409/410/429/502 affichees depuis le JSON ;
+- l'envoi du lead est desormais **bloque** tant que le numero n'est pas verifie ; le drapeau `telephone_verifie` est transmis au CRM, a Google Sheets et a l'evenement GTM ;
+- interface injectee sous le champ telephone, sans modification de `style.css` ni du design.
+Details : `docs/VERIFICATION-SMS.md`. Prerequis : l'API doit autoriser l'origine publique de la LP en CORS.
