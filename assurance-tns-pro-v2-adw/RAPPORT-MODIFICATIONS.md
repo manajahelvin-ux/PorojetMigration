@@ -38,7 +38,14 @@ Remplacé par une **validation contact simple** (~1 Ko) :
 - Test serveur local : page + `style.css` + `script.js` + nouvelle image → HTTP 200 ✅
 - Restent dans `style.css` quelques classes CSS orphelines de l'ancien OTP (`.champ-telephone-verification`, etc.) : inertes, sans effet.
 
+## 6. Correctif soumission formulaire — fini le « Oops! Something went wrong » (2026-10-26)
+- **Cause** : le cœur Webflow du bundle envoie le formulaire vers `https://webflow.com/api/v1/form/<site-id>` → échec systématique hors hébergement Webflow (test local, hébergement statique…) → affichage de `.w-form-fail` (« Oops! … »).
+- **Correctif (le plus simple/efficace)** : un bloc « SOUMISSION AUTONOME DU LEAD » dans `script.js` intercepte l'envoi **avant** Webflow (écouteur `submit` en phase de capture sur `document`), uniquement à la dernière étape (bouton Valider visible). Il reproduit le comportement d'origine : validation téléphone FR + consentement → `dataLayer` (`formulaire_lead` / `formulaire_micro_entrepreneur`) → `localStorage` → message **« Merci ! »** (`.w-form-done`) → redirection `?ltm_typ=` après 3 s. Anti double-envoi inclus.
+- **Envoi CRM optionnel en 1 ligne** : variable `LEAD_ENDPOINT` en tête du bloc (rechercher « LEAD_ENDPOINT » dans `script.js`). Vide par défaut = tracking GTM seul. Collez-y l'URL d'un webhook (Make, Zapier, Google Apps Script vers Sheets, endpoint HelloLead…) pour recevoir chaque lead en POST JSON.
+- **Tests fonctionnels (jsdom, DOM réel de la page)** : 4/4 ✅ — cas réel (téléphone valide + « J'accepte ») → succès affiché, Webflow jamais appelé, `formulaire_lead` poussé, contact sauvegardé · téléphone invalide → message d'erreur clair, aucun envoi · soumission en cours de parcours → non interceptée (le multistep garde la main) · consentement absent → bloqué avec message clair.
+
 ## Checklist avant mise en ligne
-1. Parcours complet du formulaire jusqu'à « Merci ! » (sans étape SMS).
-2. Réception du lead en CRM / Google Sheets + Tag Assistant (`formulaire_lead`).
-3. ~~Test OTP SMS~~ → remplacé par : tester un numéro invalide (message d'erreur) puis un numéro valide (envoi direct).
+1. Parcours complet du formulaire jusqu'à « Merci ! » (sans étape SMS, sans envoi Webflow).
+2. Si réception CRM/Sheets souhaitée : renseigner `LEAD_ENDPOINT` dans `script.js` puis tester un lead complet.
+3. Tag Assistant : vérification de l'événement `formulaire_lead`.
+4. ~~Test OTP SMS~~ → remplacé par : tester un numéro invalide (message d'erreur) puis un numéro valide (succès direct « Merci ! »).
