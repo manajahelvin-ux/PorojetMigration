@@ -6097,7 +6097,7 @@ h1 {
 
 
 .background-assurance-professionel.right-form-assurance.form-2-assurance {
-  background-image: url('img/hero-background.jpg');
+  /* Ancienne image hero retiree : regle inutilisee par cette LP (hero = aplat bleu nuit .header-tns) */
   background-size: cover;
   flex-flow: column;
   justify-content: center;
@@ -11487,4 +11487,8 @@ h1 {
 
 html, body {
   overflow: auto !important;
+}
+/* Wrapper du formulaire principal (ex .w-form Webflow, retiree pour l'envoi autonome) */
+.form-autonome {
+  margin: 0 0 15px;
 }
