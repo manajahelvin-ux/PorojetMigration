@@ -11565,3 +11565,7 @@ h1 {
     padding: 8px 10px; border: 1px solid #ccc; border-radius: 2px;
     font-family: inherit; font-size: 16px; width: 170px;
   }
+/* Wrapper du formulaire principal (ex .w-form Webflow, retiree pour l'envoi autonome) */
+.form-autonome {
+  margin: 0 0 15px;
+}
