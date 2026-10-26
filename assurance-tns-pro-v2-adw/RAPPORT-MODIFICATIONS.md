@@ -44,8 +44,24 @@ Remplacé par une **validation contact simple** (~1 Ko) :
 - **Envoi CRM optionnel en 1 ligne** : variable `LEAD_ENDPOINT` en tête du bloc (rechercher « LEAD_ENDPOINT » dans `script.js`). Vide par défaut = tracking GTM seul. Collez-y l'URL d'un webhook (Make, Zapier, Google Apps Script vers Sheets, endpoint HelloLead…) pour recevoir chaque lead en POST JSON.
 - **Tests fonctionnels (jsdom, DOM réel de la page)** : 4/4 ✅ — cas réel (téléphone valide + « J'accepte ») → succès affiché, Webflow jamais appelé, `formulaire_lead` poussé, contact sauvegardé · téléphone invalide → message d'erreur clair, aucun envoi · soumission en cours de parcours → non interceptée (le multistep garde la main) · consentement absent → bloqué avec message clair.
 
+## 7. Correctif définitif soumission — vraie source identifiée (2026-10-26)
+Le §6 ne suffisait pas en navigateur réel (retesté par l'utilisateur : « Oops! » persistant). Décodage de la librairie multistep obfusquée (**Formly**) effectué :
+- Au clic sur « Valider », Formly fait `e.preventDefault()` puis `$('[data-form="multistep"]').submit()` : envoi **simulé par jQuery**, qui n'appelle que les handlers jQuery — les `addEventListener` natifs (correctif §6) sont **contournés**.
+- Le handler Webflow (délégué jQuery sur `.w-form form`) partait donc en AJAX vers `webflow.com/api/v1/form/...` → échec hors Webflow → « Oops! ».
+
+**Correctif en 3 couches :**
+1. **Racine HTML** : le wrapper du formulaire n'a plus la classe `w-form` (→ `form-autonome`, marge compensée en CSS). Le sélecteur délégué de Webflow `.w-form form` ne correspond plus **jamais**.
+2. **Couche jQuery** (le vrai chemin Formly) : nouveau fichier **`lead-handler.js`** (chargé après `script.js`, isolé du bundle) : à DOM ready, `$('.form-ass').off('submit')` puis handler propre avec `preventDefault` + `stopPropagation` → Webflow ne peut plus être appelé, même via `.submit()`.
+3. **Couche native** : capture `submit` sur `document` (touche Entrée, etc.), aucune navigation native possible.
+
+Le traitement du lead (validation FR + consentement, `dataLayer`, `localStorage`, redirection TYP, « Merci ! », webhook `LEAD_ENDPOINT` optionnel) est inchangé — la constante est désormais en tête de **`lead-handler.js`**. L'ancien bloc du §6 a été retiré de `script.js`.
+
+**Tests (jsdom + vrai jQuery 3.7, écosystème réel simulé : clic Formly `.submit()`, handler délégué Webflow espion, anciens handlers)** : 4/4 ✅ — vrai parcours → « Merci ! », Webflow appelé 0 fois (avec et sans la classe `w-form`) · événement natif → 1 seul envoi · téléphone invalide → message clair, aucun envoi.
+
+> ⚠️ **Test local** : extraire le ZIP dans un **nouveau dossier** (ou Ctrl+F5) pour éviter le cache navigateur sur `index.html`/`script.js` (mêmes noms de fichiers).
+
 ## Checklist avant mise en ligne
 1. Parcours complet du formulaire jusqu'à « Merci ! » (sans étape SMS, sans envoi Webflow).
-2. Si réception CRM/Sheets souhaitée : renseigner `LEAD_ENDPOINT` dans `script.js` puis tester un lead complet.
+2. Si réception CRM/Sheets souhaitée : renseigner `LEAD_ENDPOINT` dans `lead-handler.js` puis tester un lead complet.
 3. Tag Assistant : vérification de l'événement `formulaire_lead`.
 4. ~~Test OTP SMS~~ → remplacé par : tester un numéro invalide (message d'erreur) puis un numéro valide (succès direct « Merci ! »).

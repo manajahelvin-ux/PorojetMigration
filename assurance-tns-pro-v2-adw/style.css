@@ -11441,3 +11441,7 @@ h1 {
       font-size : 16px !important;
     }
 }
+/* Wrapper du formulaire principal (ex .w-form Webflow, retiree pour l'envoi autonome) */
+.form-autonome {
+  margin: 0 0 15px;
+}
