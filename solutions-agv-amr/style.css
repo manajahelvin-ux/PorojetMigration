@@ -4057,7 +4057,7 @@ blockquote {
 .content-aprolis {
   grid-column-gap: 30px;
   grid-row-gap: 30px;
-  background-image: linear-gradient(#0009, #0009), url('img/1685x572-bandeau-AGV-Bidibot_06.jpg'), url('img/ouvriers-d-usine-debout-dans-l-entrepot-industriel-et-discutant-de-la-production.png');
+  background-image: linear-gradient(#0009, #0009), url('img/hero-agv-amr.jpg'), url('img/ouvriers-d-usine-debout-dans-l-entrepot-industriel-et-discutant-de-la-production.png');
   background-position: 0 0, 50%, 50% 45%;
   background-size: auto, cover, cover;
   justify-content: flex-start;
