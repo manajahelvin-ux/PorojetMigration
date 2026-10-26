@@ -86,3 +86,10 @@ Inventaire mémorisé + correspondance complète : **`docs/ANALYSE-FONCTIONNELLE
 2. Renseigner `crm.url` et `googleSheet.url` dans `lead-handler.js` (voir `docs/CONFIGURATION-CRM-GOOGLE-SHEET-GTM.md`), puis tester un lead complet avec l'URL de test fournie.
 3. Tag Assistant : vérification de l'événement `formulaire_lead`.
 4. ~~Test OTP SMS~~ → remplacé par : tester un numéro invalide (message d'erreur) puis un numéro valide (succès direct « Merci ! »).
+
+## Ajout — Verification du numero par SMS (2026-10-26)
+A la demande metier, la verification par code SMS (API SMS Partner HelloLead, meme contrat que la LP de reference) est **reintroduite** :
+- nouveau module `verification-sms.js` : mobile 06/07, envoi `envoyer_code`, verification `verifier_code` (code 6 chiffres, 10 min, usage unique), compte a rebours de renvoi 120 s, erreurs 422/404/409/410/429/502 affichees depuis le JSON ;
+- l'envoi du lead est desormais **bloque** tant que le numero n'est pas verifie ; le drapeau `telephone_verifie` est transmis au CRM, a Google Sheets et a l'evenement GTM ;
+- interface injectee sous le champ telephone, sans modification de `style.css` ni du design.
+Details : `docs/VERIFICATION-SMS.md`. Prerequis : l'API doit autoriser l'origine publique de la LP en CORS.
