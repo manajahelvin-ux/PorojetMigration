@@ -6245,7 +6245,9 @@ h1 {
 
 
 .background-assurance-professionel.right-form-assurance.form-2-assurance {
-  background-image: url('img/hero-background.jpg');
+  /* Nouveau visuel hero consultants - remplace hero-background.jpg (salon de beaute, hors sujet) */
+  background-image: url('img/hero-consultants.jpg');
+  background-position: left center;
   background-size: cover;
   flex-flow: column;
   justify-content: center;
@@ -11450,4 +11452,8 @@ h1 {
     {
       font-size : 16px !important;
     }
+}
+/* Wrapper du formulaire principal (ex .w-form Webflow, retiree pour l'envoi autonome) */
+.form-autonome {
+  margin: 0 0 15px;
 }
