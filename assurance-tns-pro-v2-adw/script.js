@@ -4152,26 +4152,114 @@ function closeNav() {
 ;
 
 (function () {
-  // === Validation contact simple (SANS code SMS) ===
-  // On recupere uniquement le contact : controle du format du telephone,
-  // le consentement "J'accepte" reste gere par les handlers existants.
+  // =====================================================================
+  // SOUMISSION AUTONOME DU LEAD (sans Webflow, sans code SMS)
+  // ---------------------------------------------------------------------
+  // POURQUOI : le formulaire Webflow exporte envoie les donnees vers
+  // https://webflow.com/api/v1/form/... -> hors hebergement Webflow,
+  // l'envoi echoue et affiche "Oops! Something went wrong...".
+  // Ce bloc intercepte donc l'envoi AVANT Webflow et le gere localement :
+  // validation -> dataLayer (GTM) -> localStorage -> redirection TYP
+  // -> message "Merci !". Comportement d'origine conserve a l'identique.
+  //
+  // >>> ENVOI VERS VOTRE CRM / GOOGLE SHEETS (optionnel, 1 ligne) <<<
+  // Collez ci-dessous l'URL de votre webhook (Make, Zapier, Apps Script,
+  // endpoint HelloLead...) : chaque lead y sera envoye en POST JSON.
+  // Laissez vide ('') pour ne rien envoyer (tracking GTM seul).
+  var LEAD_ENDPOINT = '';
+  // =====================================================================
   var form = document.querySelector('.form-ass');
   if (!form) return;
   var phone = form.querySelector('input[name="telephone"]');
-  if (!phone) return;
-  var msg = document.createElement('p');
-  msg.setAttribute('role', 'status');
-  msg.style.cssText = 'margin:8px 0;font-size:14px;color:#c62828;display:none';
-  phone.insertAdjacentElement('afterend', msg);
-  function tel() { return phone.value.replace(/[\s.\-]/g, ''); }
-  phone.addEventListener('input', function () { msg.style.display = 'none'; });
-  form.addEventListener('submit', function (e) {
-    if (!/^0[1-9]\d{8}$/.test(tel())) {
-      e.preventDefault(); e.stopImmediatePropagation();
-      msg.textContent = 'Veuillez saisir un num\u00e9ro de t\u00e9l\u00e9phone fran\u00e7ais valide (10 chiffres).';
-      msg.style.display = 'block';
+  var btn = form.querySelector('.bouton-valider');
+  var msg = null;
+  if (phone) {
+    msg = document.createElement('p');
+    msg.setAttribute('role', 'status');
+    msg.style.cssText = 'margin:8px 0;font-size:14px;color:#c62828;display:none';
+    phone.insertAdjacentElement('afterend', msg);
+    phone.addEventListener('input', function () { msg.style.display = 'none'; });
+  }
+  function erreur(t) {
+    if (msg) { msg.textContent = t; msg.style.display = 'block'; }
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; if (btn.dataset.texte) btn.value = btn.dataset.texte; }
+  }
+  // Capture sur document : s'execute AVANT le handler Webflow (phase bubble)
+  document.addEventListener('submit', function (e) {
+    if (e.target !== form) return;
+    // N'intercepter qu'a la derniere etape : bouton Valider visible a l'ecran
+    if (btn && !btn.getClientRects().length) return;
+    // On remplace l'envoi Webflow : aucun autre handler ne doit s'executer
+    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+    if (form.dataset.leadSent === '1') return; // anti double-envoi
+    // --- Validation contact simple (telephone FR + consentement) ---
+    var tel = phone ? phone.value.replace(/[\s.\-]/g, '') : '';
+    if (phone && !/^0[1-9]\d{8}$/.test(tel)) {
+      erreur('Veuillez saisir un num\u00e9ro de t\u00e9l\u00e9phone fran\u00e7ais valide (10 chiffres).');
       phone.focus();
+      return;
     }
+    var consent = form.querySelector('input[name="consentement"]:checked');
+    if (!consent || consent.value !== 'oui') {
+      erreur('Vous devez accepter les termes et conditions.');
+      return;
+    }
+    form.dataset.leadSent = '1';
+    if (btn) { btn.dataset.texte = btn.value; btn.value = btn.getAttribute('data-wait') || 'Patienter...'; btn.disabled = true; }
+    // --- Collecte de toutes les reponses du formulaire ---
+    var lead = {};
+    try {
+      new FormData(form).forEach(function (v, k) {
+        lead[k] = (k in lead) ? (lead[k] + ', ' + v) : v;
+      });
+    } catch (err) {}
+    lead.page = location.href;
+    lead.date = new Date().toISOString();
+    // --- 1) Tracking GTM (identique a l'original) ---
+    try {
+      var micro = form.querySelector('input[name="reponse_3"]:checked');
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ event: (micro && micro.value === 'Oui') ? 'formulaire_micro_entrepreneur' : 'formulaire_lead' });
+    } catch (err) {}
+    // --- 2) Sauvegarde locale + redirection page de remerciement (identique a l'original) ---
+    try {
+      ['nom', 'prenom', 'societe', 'code_postal', 'mail', 'telephone', 'civilite', 'ville'].forEach(function (n) {
+        var input = form.querySelector('input[name="' + n + '"]');
+        if (input && input.value !== '') localStorage.setItem(n, input.value);
+      });
+      var src = form.querySelector('input[name="source"]');
+      localStorage.setItem('source', (src ? src.value : '') + ' TYP');
+    } catch (err) {}
+    // --- 3) Envoi optionnel vers le CRM (jamais bloquant) ---
+    if (LEAD_ENDPOINT) {
+      try {
+        fetch(LEAD_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lead),
+          keepalive: true
+        }).catch(function () {});
+      } catch (err) {}
+    }
+    // --- 4) Affichage du succes (comportement Webflow reproduit) ---
+    var wrap = form.closest('.w-form') || form.parentElement;
+    var done = wrap ? wrap.querySelector('.w-form-done') : null;
+    var fail = wrap ? wrap.querySelector('.w-form-fail') : null;
+    if (fail) fail.style.display = 'none';
+    form.style.display = 'none';
+    if (done) {
+      done.style.display = 'block';
+      if (done.scrollIntoView) done.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    // --- 5) Redirection TYP si demandee dans l'URL (?ltm_typ=...) ---
+    try {
+      var link = new URLSearchParams(location.search).get('ltm_typ');
+      if (link) {
+        setTimeout(function () {
+          location.href = location.protocol + '//' + location.hostname + '/' + link;
+        }, 3000);
+      }
+    } catch (err) {}
   }, true);
 })();
 
