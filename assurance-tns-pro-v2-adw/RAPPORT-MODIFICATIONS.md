@@ -60,8 +60,17 @@ Le traitement du lead (validation FR + consentement, `dataLayer`, `localStorage`
 
 > ⚠️ **Test local** : extraire le ZIP dans un **nouveau dossier** (ou Ctrl+F5) pour éviter le cache navigateur sur `index.html`/`script.js` (mêmes noms de fichiers).
 
+## 8. Fonctionnalités production : CRM + Google Sheets + GTM + Tracking URL (2026-10-26)
+Configuration centralisée dans `LEAD_CONFIG` en tête de **`lead-handler.js`** (2 URL à coller). Guide complet : **`docs/CONFIGURATION-CRM-GOOGLE-SHEET-GTM.md`**.
+- **CRM** : POST JSON (ou `form`) vers `crm.url` — payload = champs bruts (compatibles Webflow) + champs normalisés (`email`, `telephone_e164` +33…, besoins en libellés lisibles, tracking). Envoyé en `keepalive`, repli `no-cors`, jamais bloquant.
+- **Google Sheets** : POST `no-cors` vers `googleSheet.url` (Web App Apps Script). Script prêt à déployer fourni : **`docs/Code.gs`** (onglet « Leads », 34 colonnes, anti-injection formules, verrou anti-concurrence, notification e-mail optionnelle).
+- **GTM** (GTM-53SH7D7F, déjà présent) : événement `formulaire_lead` / `formulaire_micro_entrepreneur` **enrichi** — `form_name`, `lead_source/categorie`, `utm_*`, click IDs et `user_data` (e-mail, téléphone E.164, nom, CP, FR) pour les **conversions améliorées** Google Ads (hachage côté Google). Consent Mode V2 inchangé.
+- **Tracking URL** : capture + persistance (`localStorage`) de `utm_source/medium/campaign/term/content`, `gclid/gbraid/wbraid`, `fbclid`, `msclkid`, `ttclid` + mapping partenaire d'origine (`source ← ltm_source > utm_source`, `categorie ← ltm_category`, `user ← ltm_user`) + `page_url`, `referrer`. **Bugs d'origine corrigés** : champs cachés `user`/`msclkid`/UTM ajoutés au HTML (`get_params()` plantait si le paramètre était présent) et `id` ajoutés (`source/categorie/user`…) → le pont `postMessage` Hellodevis redevient fonctionnel.
+- **Inchangés** : envoi autonome anti-« Oops! », validation FR + consentement, sauvegarde page de remerciement + redirection `ltm_typ`, **aucun code SMS**.
+- **Tests** (jsdom + vrai jQuery, parcours Formly, `fetch` espion, endpoints de test injectés) : ✅ champs cachés remplis depuis l'URL (source `ADW_tns`, gclid, UTM, user…), 2 livraisons correctement formatées, payload normalisé vérifié (libellés, +33…), dataLayer enrichi ; sans configuration → 0 envoi, « Merci ! » OK (GTM seul).
+
 ## Checklist avant mise en ligne
 1. Parcours complet du formulaire jusqu'à « Merci ! » (sans étape SMS, sans envoi Webflow).
-2. Si réception CRM/Sheets souhaitée : renseigner `LEAD_ENDPOINT` dans `lead-handler.js` puis tester un lead complet.
+2. Renseigner `crm.url` et `googleSheet.url` dans `lead-handler.js` (voir `docs/CONFIGURATION-CRM-GOOGLE-SHEET-GTM.md`), puis tester un lead complet avec l'URL de test fournie.
 3. Tag Assistant : vérification de l'événement `formulaire_lead`.
 4. ~~Test OTP SMS~~ → remplacé par : tester un numéro invalide (message d'erreur) puis un numéro valide (succès direct « Merci ! »).
