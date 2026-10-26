@@ -3858,12 +3858,6 @@ function closeNav() {
     $('.m-zipcode').inputmask({ mask: "99999", nullable :false});
     $('.chiffre').inputmask({mask: "9{*}", nullable :false});
     $('.lettre').inputmask({ mask: "e{*}",placeholder: " ",nullable :false});
-    $('.champ-telephone-verification').inputmask({
-      mask: "9",
-      placeholder: "",
-      nullable: false,
-      inputmode: "tel"
-    });
     get_params();
   });
   function get_params()
@@ -4015,13 +4009,7 @@ function closeNav() {
         }
       }
     });
-    if ($('.btn-verification').length > 0)
-    {
-      if ($('.btn-verification').is(':visible'))
-      {
-          champ_verifie = false;
-      }
-    }
+    // [SMS supprime] Ancien blocage lie au bouton de verification SMS retire.
     return champ_verifie;
   }
   $('input:radio[name="consentement"]').change(function(){
@@ -4111,148 +4099,8 @@ function closeNav() {
       $(this).val('');
     });
   });
-  $('.btn-verification,.renvoyer-code').click(function(e) {
-      let action = 'renvoyer_code';
-      let bouton_verification = $(this);
-      if ($(this).hasClass('btn-verification')) {
-          $('.message-erreur').hide();
-          $('.loading-icon').show();
-          bouton_verification.prop("disabled", true);
-          bouton_verification.css('opacity', '0.4');
-          action = 'envoyer_code';
-      } else {
-          $('.chargement').fadeIn();
-      }
-      let telephone = $('.telephone-verification').val();
-      let domaine = window.location.hostname.split('.');
-      let emetteur = domaine[1];
-      $.ajax({
-          type: "POST",
-          url: "https://mc.hellolead.pro/api/axialys/envoi_code_verification.php",
-          data: {
-              telephone: telephone,
-              emetteur: emetteur,
-              action: action
-          },
-          dataType: "JSON",
-          success: function(reponse) {
-              if (reponse.success) {
-                  if (action == 'envoyer_code') {
-                      $('.content-telephone').hide();
-                      $('.content-telephone-verification-code').fadeIn(400);
-                      $('#numero_telephone').text(telephone);
-                      $('.champ-telephone-verification').first().focus();
-                      $('.chargement').hide();
-                  } else {
-                      $('.message-erreur-code').hide();
-                      $('.message-erreur-code').text('');
-                      $('.champ-telephone-verification').val('');
-                  }
-              } else {
-                  if (action == 'envoyer_code') {
-                      $('.message-erreur').text(reponse.message);
-                      $('.message-erreur').fadeIn(400);
-                  } else {
-                      $('.message-erreur-code').fadeIn(400);
-                      $('.message-erreur-code').text(reponse.message);
-                  }
-              }
-              if (action == 'envoyer_code') {
-                  $('.loading-icon').hide();
-                  bouton_verification.prop("disabled", false);
-                  bouton_verification.css('opacity', '1');
-              } else {
-                  $('.chargement').fadeOut();
-              }
-          }
-      });
-  });
-  $('.telephone-verification').on('input change', function() {
-      let verification = $(this).val();
-      if (verification.length == 14) {
-          if (!verification.startsWith('06') && !verification.startsWith('07')) {
-              $('.btn-verification').hide();
-          } else {
-              $('.btn-verification').show();
-              $('.bouton-valider').css('opacity','0.4');
-          }
-      }
-  });
-  var inputs = $(".champ-telephone-verification");
-  var verifier_code = function() {
-      let code_complet = true;
-      inputs.each(function() {
-          if ($(this).val().length === 0) {
-              code_complet = false;
-          }
-      });
-      if (code_complet) {
-          $('.chargement').fadeIn();
-          let code = $(".champ-telephone-verification").map(function() {
-              return $(this).val();
-          }).get().join("");
-          let telephone = $('.telephone-verification').val();
-          $.ajax({
-              type: "POST",
-              url: "https://mc.hellolead.pro/api/axialys/envoi_code_verification.php",
-              data: {
-                  code: code,
-                  telephone: telephone,
-                  action: 'verifier_code'
-              },
-              dataType: "JSON",
-              success: function(reponse) {
-                  if (reponse.success) {
-                      $('.text-verification-valide').text('Merci, votre numéro a bien été validé.');
-                      $('.content-telephone-verification-code').hide();
-                      $('.content-telephone').fadeIn(400);
-                      $('.telephone-verification').attr('disabled', 'disabled');
-                      $('.telephone-verification').hide();
-                      $('.btn-verification').hide();
-                  } else {
-                      $('.message-erreur-code').fadeIn(400);
-                      $('.message-erreur-code').text(reponse.message);
-                  }
-                  $('.chargement').fadeOut();
-              }
-          });
-      }
-  };
-  // Vérifie les champs à chaque saisie
-  inputs.on("input", function() {
-      let $this = $(this);
-      if ($this.val().length === 1) {
-          $this.next(".champ-telephone-verification").focus(); // Passe au champ suivant
-      }
-      verifier_code();
-  });
-  // Permettre d'effacer et revenir au champ précédent avec la touche "Backspace"
-  $(".champ-telephone-verification").on("keydown", function(e) {
-      if (e.key === "Backspace" && $(this).val() === "") {
-          $(this).prev(".champ-telephone-verification").focus();
-      }
-  });
-  //Retour dans l'étape téléphone
-  $(".retour-telephone").on("click", function(e) {
-      $('.content-telephone').fadeIn(400);
-      $('.content-telephone-verification-code').hide();
-      $('.champ-telephone-verification').val('');
-      $('.message-erreur-code').hide();
-      $('.bouton-valider').css('opacity','0.4');
-      $('.bouton-valider').attr('disabled','disabled');
-  });
-  //Coller le code
-  $(".champ-telephone-verification").on("paste", function(e) {
-      e.preventDefault();
-      let coller = (e.originalEvent || e).clipboardData.getData('text');
-      let code = coller.replace(/\D/g, '').split('').slice(0, 6); // Garde que les chiffres
-      $('.champ-telephone-verification').each(function(index) {
-          $(this).val(code[index] || '');
-      });
-      // Retire le focus de tous les champs
-      $('.champ-telephone-verification').blur();
-      verifier_code();
-  });
+  // [SMS supprime] Ancien systeme de verification par code SMS (Axialys) retire : recuperation du contact uniquement (voir lead-handler.js).
+
   window.addEventListener('message', function (event) {
       // 1. Sécurité : Vérification de l'origine
       if (!event.origin.endsWith('hellodevis.fr')) {
