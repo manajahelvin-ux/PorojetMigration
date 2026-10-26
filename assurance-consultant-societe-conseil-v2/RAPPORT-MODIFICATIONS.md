@@ -15,3 +15,6 @@ Page quasi vide (2,2 Ko) qui embarque en iframe pleine page la LP hébergée `ht
 
 ## Tests effectués
 Contrôles statiques : présence GTM + noscript, consent default avant GTM, syntaxe `bridge.js` validée (Node), `script.js` supprimé, `lang="fr"`, HTTP 200 en local. Test bout-en-bout impossible ici (dépend de la LP hébergée et des origines réelles).
+
+## Ajout — Relais SMS active (2026-10-26)
+A la demande metier, le pont parent relaie desormais la verification SMS de la LP hebergee : poignee de main avec nonce (`bridge-ready` -> `bridge-init`), reponse `landing-url` filtree par le consentement de l'enfant, et relais `sms-request` -> API SMS Partner (`envoyer_code`/`verifier_code`, URLSearchParams, JSON lu meme en erreur) -> `sms-response` (statut + data, 422/404/409/410/429/502 transmis a l'enfant). C'est le protocole exact du snippet `WEBFLOW_EMBED.md` de la reference ; l'ancien format des LP du depot reste supporte en parallele. Conditions : la LP enfant doit autoriser l'origine de ce wrapper comme parent, et l'API SMS doit autoriser cette origine en CORS (details : `docs/VERIFICATION-SMS.md`).
