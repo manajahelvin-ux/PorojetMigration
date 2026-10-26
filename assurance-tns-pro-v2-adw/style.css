@@ -6245,7 +6245,9 @@ h1 {
 
 
 .background-assurance-professionel.right-form-assurance.form-2-assurance {
-  background-image: url('img/hero-background.jpg');
+  /* Nouveau visuel hero TNS (dirigeants & independants) - remplace hero-background.jpg (salon de beaute, hors sujet) */
+  background-image: url('img/hero-tns-pro.jpg');
+  background-position: left center;
   background-size: cover;
   flex-flow: column;
   justify-content: center;
